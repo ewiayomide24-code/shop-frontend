@@ -302,7 +302,17 @@ function App() {
                 </select>
               </div>
 
-              {loading && <p>Loading products...</p>}
+              {loading && (
+                <div className="product-grid">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="skeleton-tile">
+                      <div className="skeleton skeleton-image" />
+                      <div className="skeleton skeleton-line" />
+                      <div className="skeleton skeleton-line short" />
+                    </div>
+                  ))}
+                </div>
+              )}
               {error && <p className="error-text">{error}</p>}
               {!loading && !error && visibleProducts.length === 0 && (
                 <p style={{ color: '#6b7280' }}>No products match your filters.</p>
@@ -425,7 +435,21 @@ function ProductDetail({ productId, token, onAddToCart, onBack, wishlistIds, onT
     })
   }, [productId])
 
-  if (loading) return <p>Loading...</p>
+  if (loading) {
+    return (
+      <div className="wide">
+        <div className="detail-layout">
+          <div className="skeleton" style={{ width: 340, maxWidth: '100%', aspectRatio: '1 / 1', borderRadius: 14 }} />
+          <div style={{ flex: 1 }}>
+            <div className="skeleton skeleton-line" style={{ height: '1.6rem', width: '60%', marginBottom: '1rem' }} />
+            <div className="skeleton skeleton-line" style={{ width: '90%' }} />
+            <div className="skeleton skeleton-line" style={{ width: '80%' }} />
+            <div className="skeleton skeleton-line short" style={{ marginTop: '1rem' }} />
+          </div>
+        </div>
+      </div>
+    )
+  }
   if (!product) return <p>Product not found.</p>
 
   const inWishlist = wishlistIds.includes(product.id)
