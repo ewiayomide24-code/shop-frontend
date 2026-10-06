@@ -1226,7 +1226,6 @@ function ChangePasswordForm({ token }) {
       <input className="field" type="password" placeholder="New password (min 8 characters)" value={newPassword} onChange={(e) => setNew(e.target.value)} minLength={8} required />
       <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Saving...' : 'Change password'}</button>
     </form>
-    
   )
 }
 
