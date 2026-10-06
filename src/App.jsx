@@ -49,6 +49,7 @@ function App() {
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [resetToken, setResetToken] = useState(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   function loadProducts() {
     setLoading(true)
@@ -255,8 +256,12 @@ function App() {
 
         {view === 'products' && (
           <div className="shop-layout">
-            <aside className="filter-sidebar">
-              <h3>Filter</h3>
+            {filtersOpen && <div className="filter-backdrop" onClick={() => setFiltersOpen(false)} />}
+            <aside className={`filter-sidebar ${filtersOpen ? 'open' : ''}`}>
+              <div className="filter-sidebar-head">
+                <h3>Filter</h3>
+                <button className="filter-close" onClick={() => setFiltersOpen(false)} aria-label="Close filters">✕</button>
+              </div>
 
               <div className="filter-group">
                 <div className="filter-group-title">Search</div>
@@ -289,17 +294,26 @@ function App() {
               </div>
 
               {filtersActive && <button className="btn-text" onClick={clearFilters}>Clear filters</button>}
+
+              <button className="btn btn-primary filter-apply" onClick={() => setFiltersOpen(false)}>
+                Show {visibleProducts.length} result{visibleProducts.length !== 1 ? 's' : ''}
+              </button>
             </aside>
 
             <div>
               <div className="results-bar">
                 <span className="results-count">{visibleProducts.length} product{visibleProducts.length !== 1 ? 's' : ''}</span>
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                  <option value="popularity">Sort by popularity</option>
-                  <option value="price-asc">Price: Low to High</option>
-                  <option value="price-desc">Price: High to Low</option>
-                  <option value="name">Name A–Z</option>
-                </select>
+                <div className="results-bar-controls">
+                  <button className="filter-trigger" onClick={() => setFiltersOpen(true)}>
+                    Filters{filtersActive ? ' •' : ''}
+                  </button>
+                  <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                    <option value="popularity">Sort by popularity</option>
+                    <option value="price-asc">Price: Low to High</option>
+                    <option value="price-desc">Price: High to Low</option>
+                    <option value="name">Name A–Z</option>
+                  </select>
+                </div>
               </div>
 
               {loading && (
@@ -363,7 +377,72 @@ function App() {
         {view === 'orders' && <OrdersView token={token} />}
         {view === 'admin' && isAdmin && <AdminPanel token={token} onProductsChanged={loadProducts} />}
       </main>
+
+      <nav className="bottom-nav">
+        <button className={`bottom-nav-item ${view === 'products' ? 'active' : ''}`} onClick={() => setView('products')}>
+          <IconShop />
+          <span>Shop</span>
+        </button>
+        <button className={`bottom-nav-item ${view === 'wishlist' ? 'active' : ''}`} onClick={() => token ? setView('wishlist') : setView('login')}>
+          <IconHeart />
+          <span>Wishlist</span>
+        </button>
+        <button className={`bottom-nav-item ${view === 'cart' ? 'active' : ''}`} onClick={() => token ? setView('cart') : setView('login')}>
+          <span className="bottom-nav-icon-wrap">
+            <IconBag />
+            {cartCount > 0 && <span className="bottom-nav-badge">{cartCount}</span>}
+          </span>
+          <span>Cart</span>
+        </button>
+        <button className={`bottom-nav-item ${view === 'orders' ? 'active' : ''}`} onClick={() => token ? setView('orders') : setView('login')}>
+          <IconOrders />
+          <span>Orders</span>
+        </button>
+        <button
+          className={`bottom-nav-item ${(view === 'account' || view === 'login' || view === 'admin') ? 'active' : ''}`}
+          onClick={() => setView(token ? (isAdmin ? 'admin' : 'account') : 'login')}
+        >
+          <IconUser />
+          <span>{token ? (isAdmin ? 'Admin' : 'Account') : 'Log in'}</span>
+        </button>
+      </nav>
     </div>
+  )
+}
+
+function IconShop() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l1.5-5h15L21 9" /><path d="M3 9h18v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9z" /><path d="M9 14a3 3 0 0 0 6 0" />
+    </svg>
+  )
+}
+function IconHeart() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
+    </svg>
+  )
+}
+function IconBag() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 7h12l1 13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1L6 7z" /><path d="M9 10V6a3 3 0 0 1 6 0v4" />
+    </svg>
+  )
+}
+function IconOrders() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 5h16M4 10h16M4 15h10" />
+    </svg>
+  )
+}
+function IconUser() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="3.5" /><path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
+    </svg>
   )
 }
 
