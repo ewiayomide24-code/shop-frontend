@@ -47,7 +47,8 @@ a, button { font-family: 'Inter', -apple-system, sans-serif; }
 
 .logo-mark {
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  gap: 0.6rem;
   cursor: pointer;
 }
 
@@ -60,6 +61,21 @@ a, button { font-family: 'Inter', -apple-system, sans-serif; }
 .logo-text::after {
   content: '.';
   color: var(--color-accent);
+}
+
+.logo-tagline {
+  font-family: 'Fraunces', Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
+  color: var(--color-accent-dark);
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .logo-tagline { display: none; }
 }
 
 .nav { display: flex; align-items: center; gap: 1.5rem; }

@@ -211,6 +211,7 @@ function App() {
       <header className="app-header">
         <div className="logo-mark" onClick={() => setView('products')}>
           <span className="logo-text">shoply</span>
+          <span className="logo-tagline">shop it, love it</span>
         </div>
         <nav className="nav">
           {token && <button className="nav-link" onClick={() => setView('wishlist')}>Wishlist ({wishlistIds.length})</button>}
