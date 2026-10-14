@@ -30,7 +30,14 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const [view, setView] = useState('products')
+  // Visitors who aren't logged in land on the welcome/sign-up screen.
+  // Logged-in customers (and people arriving from a reset or checkout link)
+  // skip straight to the shop.
+  const [view, setView] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('reset') || params.get('checkout')) return 'products'
+    return localStorage.getItem('token') ? 'products' : 'welcome'
+  })
   const [selectedProductId, setSelectedProductId] = useState(null)
 
   const [token, setToken] = useState(localStorage.getItem('token'))
@@ -210,8 +217,11 @@ function App() {
     <div>
       <header className="app-header">
         <div className="logo-mark" onClick={() => setView('products')}>
-          <span className="logo-text">shoply</span>
-          <span className="logo-tagline">shop it, love it</span>
+          <img className="logo-img" src="/logo.svg" alt="shoply logo" />
+          <div className="logo-words">
+            <span className="logo-text">shoply</span>
+            <span className="logo-tagline">shop it, love it</span>
+          </div>
         </div>
         <nav className="nav">
           {token && <button className="nav-link" onClick={() => setView('wishlist')}>Wishlist ({wishlistIds.length})</button>}
@@ -234,9 +244,14 @@ function App() {
       </header>
 
       <main className="page">
-        {view === 'login' && <LoginForm onSuccess={handleAuthSuccess} onSwitch={() => setView('register')} onForgot={() => setView('forgot')} />}
-        {view === 'register' && <RegisterForm onSuccess={handleAuthSuccess} onSwitch={() => setView('login')} />}
-        {view === 'forgot' && <ForgotForm onBack={() => setView('login')} />}
+        {(view === 'welcome' || view === 'login' || view === 'register' || view === 'forgot') && (
+          <AuthScreen
+            key={view}
+            initialMode={view === 'login' ? 'login' : view === 'forgot' ? 'forgot' : 'register'}
+            onSuccess={handleAuthSuccess}
+            onSkip={() => setView('products')}
+          />
+        )}
         {view === 'reset' && (
           <ResetForm
             resetToken={resetToken}
@@ -444,6 +459,151 @@ function IconUser() {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="8" r="3.5" /><path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
     </svg>
+  )
+}
+
+
+function IconMail() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M3.5 7l8.5 6 8.5-6" />
+    </svg>
+  )
+}
+function IconLock() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="11" width="14" height="9" rx="2.5" /><path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
+  )
+}
+
+// Full-screen welcome / sign-up / log-in screen. The logo tile "drops in"
+// first, then the wordmark and the form card fade up (see .auth-* in App.css).
+function AuthScreen({ initialMode, onSuccess, onSkip }) {
+  const [mode, setMode] = useState(initialMode) // 'login' | 'register' | 'forgot'
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [sent, setSent] = useState(false)
+
+  function switchMode(next) {
+    setMode(next); setError(null); setSent(false)
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError(null); setSubmitting(true)
+    try {
+      if (mode === 'forgot') {
+        await postJson('/api/auth/forgot-password', { email })
+        setSent(true)
+      } else {
+        const isRegister = mode === 'register'
+        const res = await fetch(`${API_URL}/api/auth/${isRegister ? 'register' : 'login'}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(isRegister ? { name, email, password } : { email, password })
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || (isRegister ? 'Registration failed' : 'Login failed'))
+        onSuccess(data)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const titles = {
+    login: ['Welcome back', 'Log in to pick up where you left off.'],
+    register: ['Create your account', 'Join shoply and start shopping in seconds.'],
+    forgot: ['Reset your password', "Enter your email and we'll send you a reset link."]
+  }
+  const [title, subtitle] = titles[mode]
+  const submitLabel = {
+    login: submitting ? 'Logging in...' : 'Log in',
+    register: submitting ? 'Creating account...' : 'Create account',
+    forgot: submitting ? 'Sending...' : 'Send reset link'
+  }[mode]
+
+  return (
+    <div className="auth-screen">
+      <div className="auth-inner">
+        <div className="auth-brand">
+          <div className="auth-logo-tile">
+            <img src="/logo.svg" alt="shoply logo" />
+          </div>
+          <div className="auth-brand-text">
+            <span className="auth-wordmark">shoply<span className="auth-dot">.</span></span>
+            <span className="auth-tagline">shop it, love it</span>
+          </div>
+        </div>
+
+        <div className="auth-card">
+          {mode !== 'forgot' && (
+            <div className="auth-tabs">
+              <button type="button" className={`auth-tab ${mode === 'login' ? 'active' : ''}`} onClick={() => switchMode('login')}>Log in</button>
+              <button type="button" className={`auth-tab ${mode === 'register' ? 'active' : ''}`} onClick={() => switchMode('register')}>Sign up</button>
+            </div>
+          )}
+
+          <h2 className="auth-title">{title}</h2>
+          <p className="auth-sub">{subtitle}</p>
+
+          {sent ? (
+            <div className="auth-sent">
+              <p><strong>Check your email</strong></p>
+              <p>If an account exists for {email}, a reset link is on its way.</p>
+              <button type="button" className="btn-text" onClick={() => switchMode('login')}>Back to log in</button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              {error && <p className="auth-error">{error}</p>}
+
+              {mode === 'register' && (
+                <label className="auth-field">
+                  <span className="auth-field-icon"><IconUser /></span>
+                  <input type="text" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required />
+                </label>
+              )}
+
+              <label className="auth-field">
+                <span className="auth-field-icon"><IconMail /></span>
+                <input type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
+              </label>
+
+              {mode !== 'forgot' && (
+                <label className="auth-field">
+                  <span className="auth-field-icon"><IconLock /></span>
+                  <input
+                    type="password"
+                    placeholder={mode === 'register' ? 'Password (min 8 characters)' : 'Password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                    minLength={mode === 'register' ? 8 : undefined}
+                    required
+                  />
+                </label>
+              )}
+
+              <button type="submit" className="btn btn-primary auth-submit" disabled={submitting}>{submitLabel}</button>
+
+              <div className="auth-links">
+                {mode === 'login' && <button type="button" className="btn-text" onClick={() => switchMode('forgot')}>Forgot password?</button>}
+                {mode === 'forgot' && <button type="button" className="btn-text" onClick={() => switchMode('login')}>Back to log in</button>}
+              </div>
+            </form>
+          )}
+        </div>
+
+        <button type="button" className="auth-skip" onClick={onSkip}>Browse the shop first →</button>
+      </div>
+    </div>
   )
 }
 
@@ -1142,110 +1302,6 @@ function AdminProductRow({ product, token, categories, onChanged }) {
         <button className="btn-text" onClick={deactivate}>Deactivate</button>
       </div>
     </div>
-  )
-}
-
-function LoginForm({ onSuccess, onSwitch, onForgot }) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState(null)
-  const [submitting, setSubmitting] = useState(false)
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setError(null); setSubmitting(true)
-    try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Login failed')
-      onSuccess(data)
-    } catch (err) { setError(err.message) } finally { setSubmitting(false) }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="narrow">
-      <h2 style={{ marginBottom: '1.5rem' }}>Log in</h2>
-      {error && <p className="error-text">{error}</p>}
-      <input className="field" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      <input className="field" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-      <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Logging in...' : 'Log in'}</button>
-      <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>
-        <button type="button" className="btn-text" onClick={onForgot}>Forgot password?</button>
-      </p>
-      <p style={{ marginTop: '0.75rem', fontSize: '0.9rem', color: '#6b7280' }}>
-        Don't have an account? <button type="button" className="btn-text" onClick={onSwitch}>Sign up</button>
-      </p>
-    </form>
-  )
-}
-
-function RegisterForm({ onSuccess, onSwitch }) {
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState(null)
-  const [submitting, setSubmitting] = useState(false)
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setError(null); setSubmitting(true)
-    try {
-      const res = await fetch(`${API_URL}/api/auth/register`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Registration failed')
-      onSuccess(data)
-    } catch (err) { setError(err.message) } finally { setSubmitting(false) }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="narrow">
-      <h2 style={{ marginBottom: '1.5rem' }}>Sign up</h2>
-      {error && <p className="error-text">{error}</p>}
-      <input className="field" type="text" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} required />
-      <input className="field" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      <input className="field" type="password" placeholder="Password (min 8 characters)" value={password} onChange={(e) => setPassword(e.target.value)} required />
-      <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Signing up...' : 'Sign up'}</button>
-      <p style={{ marginTop: '1.25rem', fontSize: '0.9rem', color: '#6b7280' }}>
-        Already have an account? <button type="button" className="btn-text" onClick={onSwitch}>Log in</button>
-      </p>
-    </form>
-  )
-}
-
-function ForgotForm({ onBack }) {
-  const [email, setEmail] = useState('')
-  const [sent, setSent] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-
-  async function handleSubmit(e) {
-    e.preventDefault(); setSubmitting(true)
-    await postJson('/api/auth/forgot-password', { email })
-    setSubmitting(false); setSent(true)
-  }
-
-  if (sent) {
-    return (
-      <div className="narrow">
-        <h2 style={{ marginBottom: '1rem' }}>Check your email</h2>
-        <p>If an account exists for {email}, a reset link is on its way.</p>
-        <button className="btn-text" onClick={onBack}>Back to log in</button>
-      </div>
-    )
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="narrow">
-      <h2 style={{ marginBottom: '1.5rem' }}>Forgot password</h2>
-      <input className="field" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Sending...' : 'Send reset link'}</button>
-      <p style={{ marginTop: '1.25rem' }}>
-        <button type="button" className="btn-text" onClick={onBack}>Back to log in</button>
-      </p>
-    </form>
   )
 }
 
