@@ -691,7 +691,7 @@ select.field { appearance: none; }
   box-shadow: 0 14px 34px rgba(124, 45, 18, 0.35);
   animation: auth-logo-drop 1s cubic-bezier(0.22, 0.9, 0.3, 1) both;
 }
-.auth-logo-tile img { width: 62px; height: 62px; }
+.auth-logo-tile svg { width: 62px; height: 62px; }
 
 .auth-brand-text {
   display: flex;
@@ -827,6 +827,6 @@ select.field { appearance: none; }
 @media (max-width: 640px) {
   .auth-screen { padding-left: 1rem; padding-right: 1rem; }
   .auth-logo-tile { width: 76px; height: 76px; border-radius: 22px; }
-  .auth-logo-tile img { width: 54px; height: 54px; }
+  .auth-logo-tile svg { width: 54px; height: 54px; }
   .auth-wordmark { font-size: 1.75rem; }
 }

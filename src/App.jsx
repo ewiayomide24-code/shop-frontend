@@ -217,7 +217,7 @@ function App() {
     <div>
       <header className="app-header">
         <div className="logo-mark" onClick={() => setView('products')}>
-          <img className="logo-img" src="/logo.svg" alt="shoply logo" />
+          <LogoMark className="logo-img" />
           <div className="logo-words">
             <span className="logo-text">shoply</span>
             <span className="logo-tagline">shop it, love it</span>
@@ -426,6 +426,19 @@ function App() {
   )
 }
 
+// The shoply logo, built into the code so there's no separate image file to
+// upload or lose. To use your own artwork instead, replace the <svg> below
+// with: <img src="/your-logo.png" alt="shoply logo" className={className} />
+function LogoMark({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 64 64" role="img" aria-label="shoply logo" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="16" fill="#f97316" />
+      <path d="M20 24h24l2 22a2 2 0 0 1-2 2H20a2 2 0 0 1-2-2l2-22z" fill="none" stroke="#ffffff" strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M26 28v-5a6 6 0 0 1 12 0v5" fill="none" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function IconShop() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -535,7 +548,7 @@ function AuthScreen({ initialMode, onSuccess, onSkip }) {
       <div className="auth-inner">
         <div className="auth-brand">
           <div className="auth-logo-tile">
-            <img src="/logo.svg" alt="shoply logo" />
+            <LogoMark />
           </div>
           <div className="auth-brand-text">
             <span className="auth-wordmark">shoply<span className="auth-dot">.</span></span>
@@ -1364,5 +1377,3 @@ function ChangePasswordForm({ token }) {
     </form>
   )
 }
-
-export default App
