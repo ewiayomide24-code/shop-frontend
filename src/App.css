@@ -537,7 +537,7 @@ select.field { appearance: none; }
     background: var(--color-accent);
     color: #ffffff;
     border: none;
-    border-radius: 999px;
+    border-radius: 10px;
     padding: 0.55rem 1rem;
     font-size: 0.85rem;
     font-weight: 600;
@@ -829,4 +829,55 @@ select.field { appearance: none; }
   .auth-logo-tile { width: 76px; height: 76px; border-radius: 22px; }
   .auth-logo-tile svg { width: 54px; height: 54px; }
   .auth-wordmark { font-size: 1.75rem; }
+}
+
+
+/* ---------- Icons that replaced text symbols ---------- */
+
+.rating { display: flex; align-items: center; gap: 0.3rem; }
+.star-icon { color: var(--color-accent); flex-shrink: 0; }
+.review-score { display: inline-flex; align-items: center; gap: 0.25rem; color: #6b7280; margin-left: 0.4rem; }
+.wishlist-heart svg { display: block; }
+
+@media (max-width: 640px) {
+  .filter-close { display: flex; align-items: center; justify-content: center; padding: 0; }
+}
+
+/* ---------- Terms and Privacy pages ---------- */
+
+.legal { max-width: 720px; margin: 0 auto; }
+.legal h2 { margin-bottom: 0.25rem; }
+.legal-updated { color: #6b7280; font-size: 0.85rem; margin-bottom: 1.5rem; }
+.legal h3 { font-size: 1.05rem; margin: 1.5rem 0 0.4rem; }
+.legal p, .legal li { color: #374151; line-height: 1.65; }
+.legal ul { padding-left: 1.2rem; margin: 0 0 0.75rem; }
+.legal a { color: var(--color-accent-dark); }
+
+/* ---------- Footer ---------- */
+
+.site-footer {
+  margin-top: 3rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #ececec;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+.site-footer-links { display: flex; gap: 1.1rem; }
+
+/* ---------- Consent line on the sign-up form ---------- */
+
+.auth-consent { font-size: 0.78rem; color: #6b7280; text-align: center; margin: 0.9rem 0 0; line-height: 1.5; }
+.auth-inline-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-accent-dark);
+  text-decoration: underline;
+  cursor: pointer;
 }

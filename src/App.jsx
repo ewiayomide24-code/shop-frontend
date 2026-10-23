@@ -3,6 +3,12 @@ import './App.css'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://nexora-shop-backend.onrender.com'
 
+const STORE_NAME = 'shoply'
+// Put your real support email here. The Terms and Privacy pages and the footer
+// show it to customers. While it is '' the contact lines stay hidden.
+const CONTACT_EMAIL = ''
+const LEGAL_UPDATED = 'October 14, 2026'
+
 // Wraps fetch for authenticated requests. On a 401 (expired/invalid token),
 // it fires a global event so App can log the user out cleanly, instead of
 // every screen silently failing or showing stale data.
@@ -21,7 +27,7 @@ async function postJson(path, body, token) {
     body: JSON.stringify(body)
   })
   const data = await res.json().catch(() => ({}))
-  return { ok: res.ok, data }
+  return { ok: res.ok, status: res.status, data }
 }
 
 function App() {
@@ -250,6 +256,7 @@ function App() {
             initialMode={view === 'login' ? 'login' : view === 'forgot' ? 'forgot' : 'register'}
             onSuccess={handleAuthSuccess}
             onSkip={() => setView('products')}
+            onLegal={(page) => setView(page)}
           />
         )}
         {view === 'reset' && (
@@ -276,7 +283,7 @@ function App() {
             <aside className={`filter-sidebar ${filtersOpen ? 'open' : ''}`}>
               <div className="filter-sidebar-head">
                 <h3>Filter</h3>
-                <button className="filter-close" onClick={() => setFiltersOpen(false)} aria-label="Close filters">✕</button>
+                <button className="filter-close" onClick={() => setFiltersOpen(false)} aria-label="Close filters"><CloseIcon /></button>
               </div>
 
               <div className="filter-group">
@@ -358,7 +365,7 @@ function App() {
                           onClick={(e) => { e.stopPropagation(); toggleWishlist(product.id) }}
                           aria-label="Toggle wishlist"
                         >
-                          {wishlistIds.includes(product.id) ? '♥' : '♡'}
+                          <HeartIcon filled={wishlistIds.includes(product.id)} />
                         </button>
                       </div>
                       <div className="product-name">{product.name}</div>
@@ -392,6 +399,17 @@ function App() {
         {view === 'checkout' && <CheckoutForm cart={cart} onSubmit={startCheckout} onBack={() => setView('cart')} />}
         {view === 'orders' && <OrdersView token={token} />}
         {view === 'admin' && isAdmin && <AdminPanel token={token} onProductsChanged={loadProducts} />}
+        {view === 'terms' && <TermsPage onBack={() => setView('products')} />}
+        {view === 'privacy' && <PrivacyPage onBack={() => setView('products')} />}
+
+        <footer className="site-footer">
+          <span>&copy; {new Date().getFullYear()} {STORE_NAME}</span>
+          <div className="site-footer-links">
+            <button className="btn-text" onClick={() => setView('terms')}>Terms</button>
+            <button className="btn-text" onClick={() => setView('privacy')}>Privacy</button>
+            {CONTACT_EMAIL && <a className="btn-text" href={`mailto:${CONTACT_EMAIL}`}>Contact</a>}
+          </div>
+        </footer>
       </main>
 
       <nav className="bottom-nav">
@@ -435,6 +453,28 @@ function LogoMark({ className }) {
       <rect width="64" height="64" rx="16" fill="#f97316" />
       <path d="M20 24h24l2 22a2 2 0 0 1-2 2H20a2 2 0 0 1-2-2l2-22z" fill="none" stroke="#ffffff" strokeWidth="3.5" strokeLinejoin="round" />
       <path d="M26 28v-5a6 6 0 0 1 12 0v5" fill="none" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function HeartIcon({ filled }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
+    </svg>
+  )
+}
+function StarIcon() {
+  return (
+    <svg className="star-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21.1 7 14.2 2 9.3l6.9-1L12 2z" />
+    </svg>
+  )
+}
+function CloseIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" />
     </svg>
   )
 }
@@ -493,7 +533,7 @@ function IconLock() {
 
 // Full-screen welcome / sign-up / log-in screen. The logo tile "drops in"
 // first, then the wordmark and the form card fade up (see .auth-* in App.css).
-function AuthScreen({ initialMode, onSuccess, onSkip }) {
+function AuthScreen({ initialMode, onSuccess, onSkip, onLegal }) {
   const [mode, setMode] = useState(initialMode) // 'login' | 'register' | 'forgot'
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -511,7 +551,8 @@ function AuthScreen({ initialMode, onSuccess, onSkip }) {
     setError(null); setSubmitting(true)
     try {
       if (mode === 'forgot') {
-        await postJson('/api/auth/forgot-password', { email })
+        const { ok, data } = await postJson('/api/auth/forgot-password', { email })
+        if (!ok) throw new Error(data.error || 'Could not send the reset email. Please try again.')
         setSent(true)
       } else {
         const isRegister = mode === 'register'
@@ -532,9 +573,9 @@ function AuthScreen({ initialMode, onSuccess, onSkip }) {
   }
 
   const titles = {
-    login: ['Welcome back', 'Log in to pick up where you left off.'],
-    register: ['Create your account', 'Join shoply and start shopping in seconds.'],
-    forgot: ['Reset your password', "Enter your email and we'll send you a reset link."]
+    login: ['Welcome back', 'Log in to see your cart, wishlist and orders.'],
+    register: ['Create your account', 'Save your cart, wishlist and orders in one place.'],
+    forgot: ['Reset your password', 'Enter your email and we will send you a reset link.']
   }
   const [title, subtitle] = titles[mode]
   const submitLabel = {
@@ -606,6 +647,15 @@ function AuthScreen({ initialMode, onSuccess, onSkip }) {
 
               <button type="submit" className="btn btn-primary auth-submit" disabled={submitting}>{submitLabel}</button>
 
+              {mode === 'register' && (
+                <p className="auth-consent">
+                  By creating an account you agree to our{' '}
+                  <button type="button" className="auth-inline-link" onClick={() => onLegal('terms')}>Terms</button>
+                  {' '}and{' '}
+                  <button type="button" className="auth-inline-link" onClick={() => onLegal('privacy')}>Privacy Policy</button>.
+                </p>
+              )}
+
               <div className="auth-links">
                 {mode === 'login' && <button type="button" className="btn-text" onClick={() => switchMode('forgot')}>Forgot password?</button>}
                 {mode === 'forgot' && <button type="button" className="btn-text" onClick={() => switchMode('login')}>Back to log in</button>}
@@ -620,10 +670,111 @@ function AuthScreen({ initialMode, onSuccess, onSkip }) {
   )
 }
 
+function LegalPage({ title, onBack, children }) {
+  return (
+    <div className="legal">
+      <button className="back-link" onClick={onBack}>&larr; Back to shop</button>
+      <h2>{title}</h2>
+      <p className="legal-updated">Last updated {LEGAL_UPDATED}</p>
+      {children}
+    </div>
+  )
+}
+
+function TermsPage({ onBack }) {
+  return (
+    <LegalPage title="Terms and Conditions" onBack={onBack}>
+      <p>These terms apply when you browse or buy from {STORE_NAME}. By creating an account or placing an order, you agree to them.</p>
+
+      <h3>Your account</h3>
+      <p>Give us accurate details and keep your password to yourself. You are responsible for what happens under your account. Tell us if you think someone else has used it.</p>
+
+      <h3>Products and prices</h3>
+      <p>All prices are in US dollars. We try to describe and photograph products accurately, but colours and details can look different on your screen. If we find a mistake in a price or description, we may correct it. If that affects an order you have placed, we will contact you about it. Stock is limited, and an item is only held for you once your payment goes through.</p>
+
+      <h3>Orders and payment</h3>
+      <p>You pay by card through Stripe when you check out. An order is confirmed once Stripe tells us your payment succeeded. If a payment fails, or you leave the payment page, the order is not completed and you are not charged. Discount codes apply as shown at checkout, can expire, and have no cash value.</p>
+
+      <h3>Shipping</h3>
+      <p>We ship to the address you enter at checkout, so please check it carefully. Delivery times are estimates, not guarantees, and can be affected by things outside our control, such as carriers and customs.</p>
+
+      <h3>Cancellations, returns and refunds</h3>
+      <p>If you need to cancel an order, or something is wrong with it, contact us as soon as you can. We can usually cancel an order that has not shipped yet. If an item arrives damaged, faulty or not as ordered, we will work with you on a replacement or refund. Approved refunds go back to the original payment method.</p>
+
+      <h3>Reviews</h3>
+      <p>Signed-in customers can leave product reviews. Reviews are shown with your name. Keep them honest and civil. We may remove reviews that are abusive, misleading or unlawful.</p>
+
+      <h3>Acceptable use</h3>
+      <p>Do not misuse the site. That includes trying to break or overload it, getting into other people's accounts, or using it for anything unlawful.</p>
+
+      <h3>Our responsibility</h3>
+      <p>We provide the store and its content as they are. We are not liable for indirect or consequential losses, and our total liability for an order is limited to the amount you paid for it. Nothing in these terms limits any rights you have under the law that cannot be waived.</p>
+
+      <h3>Changes to these terms</h3>
+      <p>We may update these terms from time to time. The date at the top shows when they last changed. If you keep using the store after a change, you accept the updated terms.</p>
+
+      {CONTACT_EMAIL && (
+        <>
+          <h3>Contact</h3>
+          <p>Questions about these terms? Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
+        </>
+      )}
+    </LegalPage>
+  )
+}
+
+function PrivacyPage({ onBack }) {
+  return (
+    <LegalPage title="Privacy Policy" onBack={onBack}>
+      <p>This page explains what personal information {STORE_NAME} collects, why we collect it, and who else handles it.</p>
+
+      <h3>What we collect</h3>
+      <ul>
+        <li>Account details: your name, email address and password. Your password is stored as a one-way hash, so we cannot read it.</li>
+        <li>Order details: the items you buy, your shipping address, order totals and any discount code you use.</li>
+        <li>Cart and wishlist: the items you save while signed in.</li>
+        <li>Reviews: the rating and comment you write, shown with your name.</li>
+        <li>Basic technical data: our hosting providers keep standard server logs, such as IP address, browser type and the pages requested, for security and troubleshooting.</li>
+      </ul>
+
+      <h3>Card payments</h3>
+      <p>Card payments are handled by Stripe. You enter your card details on Stripe's page, and they never pass through or get stored on our servers. We receive confirmation that a payment succeeded, along with the order it belongs to.</p>
+
+      <h3>How we use it</h3>
+      <p>We use your information to run your account, take and deliver your orders, send order confirmations and password reset emails, prevent fraud and abuse, and answer your questions. We do not sell your personal information, and we do not use it for advertising.</p>
+
+      <h3>Who else handles it</h3>
+      <p>We use a few services to run the store, and they process some of your data for us: Stripe for payments, Resend for sending emails, and our hosting and database providers for keeping the site and your records online. Our pages also load fonts from Google Fonts, so your browser contacts Google when a page opens. We may also share information when the law requires it.</p>
+
+      <h3>Storage on your device</h3>
+      <p>When you sign in, a sign-in token is kept in your browser so you stay logged in. It is removed when you log out. On our own pages we do not use advertising or tracking cookies.</p>
+
+      <h3>How long we keep it</h3>
+      <p>We keep your account and order records while your account is open, and for as long as we need them for accounting, tax and legal reasons. You can ask us to delete your account at any time.</p>
+
+      <h3>Your choices</h3>
+      <p>You can ask to see, correct or delete the personal information we hold about you.{CONTACT_EMAIL && <> Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> to make a request.</>}</p>
+
+      <h3>Security</h3>
+      <p>We use HTTPS, and passwords are stored only as hashes. No online service is perfectly secure, so please choose a strong password that you do not use elsewhere.</p>
+
+      <h3>Changes to this policy</h3>
+      <p>We may update this policy from time to time. The date at the top shows when it last changed.</p>
+
+      {CONTACT_EMAIL && (
+        <>
+          <h3>Contact</h3>
+          <p>Questions about privacy? Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
+        </>
+      )}
+    </LegalPage>
+  )
+}
+
 function OrderSuccessView({ onViewOrders, onContinue }) {
   return (
     <div className="narrow status-view">
-      <h2 style={{ marginBottom: '1rem' }}>Thank you — your order is confirmed!</h2>
+      <h2 style={{ marginBottom: '1rem' }}>Thank you, your order is confirmed!</h2>
       <p style={{ marginBottom: '1.5rem' }}>We've received your payment and we're getting your order ready.</p>
       <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
         <button className="btn btn-primary" onClick={onViewOrders}>View my orders</button>
@@ -651,13 +802,13 @@ function WishlistView({ items, onOpen, onToggleWishlist, onBack }) {
     <div className="medium">
       <button className="back-link" onClick={onBack}>&larr; Back to products</button>
       <h2 style={{ marginBottom: '1.5rem' }}>Your Wishlist</h2>
-      {items.length === 0 && <p style={{ color: '#6b7280' }}>Nothing saved yet — tap the heart on any product to add it here.</p>}
+      {items.length === 0 && <p style={{ color: '#6b7280' }}>Nothing saved yet. Tap the heart on any product to add it here.</p>}
       <div className="product-grid">
         {items.map((product) => (
           <div key={product.id} className="product-tile" onClick={() => onOpen(product.id)}>
             <div className="product-image-wrap">
               {product.images && product.images[0] && <img src={product.images[0]} alt={product.name} />}
-              <button className="wishlist-heart active" onClick={(e) => { e.stopPropagation(); onToggleWishlist(product.id) }} aria-label="Remove from wishlist">♥</button>
+              <button className="wishlist-heart active" onClick={(e) => { e.stopPropagation(); onToggleWishlist(product.id) }} aria-label="Remove from wishlist"><HeartIcon filled /></button>
             </div>
             <div className="product-name">{product.name}</div>
             <div className="product-price">${product.price.toFixed(2)}</div>
@@ -718,7 +869,7 @@ function ProductDetail({ productId, token, onAddToCart, onBack, wishlistIds, onT
             onClick={() => token ? onToggleWishlist(product.id) : onRequireLogin()}
             aria-label="Toggle wishlist"
           >
-            {inWishlist ? '♥' : '♡'}
+            <HeartIcon filled={inWishlist} />
           </button>
         </div>
         <div>
@@ -726,7 +877,7 @@ function ProductDetail({ productId, token, onAddToCart, onBack, wishlistIds, onT
           <p>{product.description}</p>
           <p className="product-price">${product.price.toFixed(2)}</p>
           <p className="product-stock">{product.inStock ? `${product.stock} in stock` : 'Out of stock'}</p>
-          {product.reviewCount > 0 && <p className="rating">★ {product.averageRating} · {product.reviewCount} review{product.reviewCount !== 1 ? 's' : ''}</p>}
+          {product.reviewCount > 0 && <p className="rating"><StarIcon /> {product.averageRating} · {product.reviewCount} review{product.reviewCount !== 1 ? 's' : ''}</p>}
           <div className="qty-row">
             <input type="number" min="1" max={product.stock} value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="small-field" />
             <button className="btn btn-primary" disabled={!product.inStock} onClick={() => onAddToCart(product.id, quantity)}>Add to cart</button>
@@ -738,7 +889,7 @@ function ProductDetail({ productId, token, onAddToCart, onBack, wishlistIds, onT
       {reviews.length === 0 && <p style={{ color: '#6b7280' }}>No reviews yet.</p>}
       {reviews.map((review) => (
         <div key={review.id} className="review-row">
-          <strong>{review.userName}</strong> — ★ {review.rating}
+          <strong>{review.userName}</strong>{' '}<span className="review-score"><StarIcon /> {review.rating}</span>
           {review.comment && <p>{review.comment}</p>}
         </div>
       ))}
@@ -783,11 +934,11 @@ function ReviewForm({ productId, token, onSubmitted }) {
       <h3 style={{ marginBottom: '0.75rem' }}>Write a review</h3>
       {error && <p className="error-text">{error}</p>}
       <select className="field" value={rating} onChange={(e) => setRating(e.target.value)}>
-        <option value="5">★★★★★ (5)</option>
-        <option value="4">★★★★☆ (4)</option>
-        <option value="3">★★★☆☆ (3)</option>
-        <option value="2">★★☆☆☆ (2)</option>
-        <option value="1">★☆☆☆☆ (1)</option>
+        <option value="5">5 stars</option>
+        <option value="4">4 stars</option>
+        <option value="3">3 stars</option>
+        <option value="2">2 stars</option>
+        <option value="1">1 star</option>
       </select>
       <textarea className="field" placeholder="Share your thoughts (optional)" value={comment} onChange={(e) => setComment(e.target.value)} />
       <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Submitting...' : 'Submit review'}</button>
@@ -861,7 +1012,7 @@ function CheckoutForm({ cart, onSubmit, onBack }) {
 }
 
 // Always calls /api/orders/me, so this screen only ever shows the logged-in
-// user's own order history — even for an admin account.
+// user's own order history, even for an admin account.
 function OrdersView({ token }) {
   const [orders, setOrders] = useState(null)
 
@@ -879,7 +1030,7 @@ function OrdersView({ token }) {
       <h2 style={{ marginBottom: '1.5rem' }}>Your Orders</h2>
       {orders.map((order) => (
         <div key={order.id} className="order-card">
-          <p><strong>Order #{order.id.slice(0, 8)}</strong> — {order.status}</p>
+          <p><strong>Order #{order.id.slice(0, 8)}</strong> · {order.status}</p>
           {order.items.map((item) => <p key={item.productId}>{item.quantity} × {item.name}</p>)}
           {order.couponCode && <p style={{ color: '#6b7280' }}>Coupon: {order.couponCode} (-${order.discount.toFixed(2)})</p>}
           <p><strong>Total: ${order.total.toFixed(2)}</strong></p>
@@ -1128,7 +1279,7 @@ function AdminCoupons({ token }) {
         {coupons && coupons.length === 0 && <p style={{ color: '#6b7280' }}>No coupons yet.</p>}
         {coupons && coupons.map((c) => (
           <div key={c.id} className="admin-row">
-            <div><strong>{c.code}</strong> — {c.type === 'percent' ? `${c.value}% off` : `$${Number(c.value).toFixed(2)} off`}</div>
+            <div><strong>{c.code}</strong> · {c.type === 'percent' ? `${c.value}% off` : `$${Number(c.value).toFixed(2)} off`}</div>
             <button className="btn-text" onClick={() => remove(c)}>Delete</button>
           </div>
         ))}
@@ -1309,7 +1460,7 @@ function AdminProductRow({ product, token, categories, onChanged }) {
 
   return (
     <div className="admin-row">
-      <div>{product.name} — ${product.price.toFixed(2)} — {product.stock} in stock — {product.category}</div>
+      <div>{product.name} · ${product.price.toFixed(2)} · {product.stock} in stock · {product.category}</div>
       <div style={{ display: 'flex', gap: '1rem' }}>
         <button className="btn-text" onClick={() => setEditing(true)}>Edit</button>
         <button className="btn-text" onClick={deactivate}>Deactivate</button>
@@ -1377,3 +1528,5 @@ function ChangePasswordForm({ token }) {
     </form>
   )
 }
+
+export default App
