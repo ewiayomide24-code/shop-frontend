@@ -34,6 +34,7 @@ function App() {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
+  const [slowLoad, setSlowLoad] = useState(false)
   const [error, setError] = useState(null)
 
   // Visitors who aren't logged in land on the welcome/sign-up screen.
@@ -64,17 +65,33 @@ function App() {
   const [resetToken, setResetToken] = useState(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
 
+  // If the server takes a while (a free host can need up to a minute to wake
+  // up), tell the visitor instead of leaving them staring at grey boxes.
+  useEffect(() => {
+    if (!loading) { setSlowLoad(false); return }
+    const timer = setTimeout(() => setSlowLoad(true), 6000)
+    return () => clearTimeout(timer)
+  }, [loading])
+
   function loadProducts() {
     setLoading(true)
+    setError(null)
     fetch(`${API_URL}/api/products?limit=100`)
-      .then((res) => res.json())
-      .then((data) => { setProducts(data.data); setLoading(false) })
-      .catch(() => { setError('Could not load products. Is the backend running?'); setLoading(false) })
+      .then(async (res) => {
+        const data = await res.json()
+        if (!res.ok || !Array.isArray(data.data)) throw new Error('Unexpected response')
+        setProducts(data.data)
+        setLoading(false)
+      })
+      .catch(() => {
+        setError('We could not load the products. Check your connection and try again.')
+        setLoading(false)
+      })
   }
 
   useEffect(() => {
     loadProducts()
-    fetch(`${API_URL}/api/categories`).then((r) => r.json()).then(setCategories)
+    fetch(`${API_URL}/api/categories`).then((r) => r.json()).then((d) => setCategories(Array.isArray(d) ? d : [])).catch(() => {})
   }, [])
 
   function handleLogout() {
@@ -339,6 +356,9 @@ function App() {
                 </div>
               </div>
 
+              {loading && slowLoad && (
+                <p className="slow-note">Still loading. The store may be waking up, which can take up to a minute the first time.</p>
+              )}
               {loading && (
                 <div className="product-grid">
                   {Array.from({ length: 8 }).map((_, i) => (
@@ -350,7 +370,12 @@ function App() {
                   ))}
                 </div>
               )}
-              {error && <p className="error-text">{error}</p>}
+              {error && (
+                <div className="load-error">
+                  <p className="error-text">{error}</p>
+                  <button className="btn" onClick={loadProducts}>Try again</button>
+                </div>
+              )}
               {!loading && !error && visibleProducts.length === 0 && (
                 <p style={{ color: '#6b7280' }}>No products match your filters.</p>
               )}
@@ -1048,8 +1073,8 @@ function AdminPanel({ token, onProductsChanged }) {
   function reload() { setRefreshFlag((n) => n + 1) }
 
   useEffect(() => {
-    fetch(`${API_URL}/api/categories`).then((r) => r.json()).then(setCategories)
-    fetch(`${API_URL}/api/products?limit=100`).then((r) => r.json()).then((data) => setProducts(data.data))
+    fetch(`${API_URL}/api/categories`).then((r) => r.json()).then((d) => setCategories(Array.isArray(d) ? d : [])).catch(() => {})
+    fetch(`${API_URL}/api/products?limit=100`).then((r) => r.json()).then((data) => setProducts(data.data || [])).catch(() => {})
   }, [refreshFlag])
 
   const [tab, setTab] = useState('products')

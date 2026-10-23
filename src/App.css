@@ -881,3 +881,9 @@ select.field { appearance: none; }
   text-decoration: underline;
   cursor: pointer;
 }
+
+
+/* ---------- Slow or failed loading ---------- */
+
+.slow-note { color: #6b7280; font-size: 0.9rem; margin: 0 0 1rem; }
+.load-error { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; margin-bottom: 1rem; }
